@@ -32,7 +32,7 @@ gemini-api/
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/gemini-api.git
+git clone https://github.com/carmenbarriga/gemini-api-fastapi.git
 cd gemini-api
 ```
 
