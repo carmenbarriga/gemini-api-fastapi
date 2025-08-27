@@ -1,0 +1,15 @@
+# docker compose up --build
+# docker compose up -d --build
+# docker compose logs -f
+# docker compose down
+
+name: gemini-app
+
+services:
+  gemini-api:
+    build: .
+    container_name: gemini-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
