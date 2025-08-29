@@ -1,13 +1,14 @@
 import json
 import os
 import re
-from typing import Annotated, Literal
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from google.genai import Client, types
-from pydantic import BaseModel, Field, StringConstraints
+
+from models.question import Question
+from models.summarize import SummarizeRequest, SummarizeResponse
 
 load_dotenv()
 
@@ -30,10 +31,6 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)
     return True
 
 
-class Question(BaseModel):
-    text: str
-
-
 @app.post("/ask")
 def ask_gemini(question: Question, _: bool = Depends(verify_api_key)):
     try:
@@ -43,19 +40,6 @@ def ask_gemini(question: Question, _: bool = Depends(verify_api_key)):
         return {"answer": response.text}
     except Exception:
         raise HTTPException(status_code=502, detail="Upstream model error")
-
-
-class SummarizeRequest(BaseModel):
-    text: Annotated[str, StringConstraints(min_length=20)] = Field(
-        ..., description="Text to resume (20 characters minimum)"
-    )
-    length: Literal["short", "medium", "detailed"] = "medium"
-    focus: Literal["simple", "normal", "professional"] = "normal"
-
-
-class SummarizeResponse(BaseModel):
-    summary: str
-    topic: str
 
 
 def length_rule(length: str) -> str:
