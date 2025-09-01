@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 
 from fastapi import HTTPException
@@ -6,6 +7,8 @@ from fastapi import HTTPException
 from core import errors
 from core.gemini import client, gemini_types
 from models.summarize import SummarizeRequest, SummarizeResponse
+
+logger = logging.getLogger(__name__)
 
 
 def length_rule(length: str) -> str:
@@ -25,6 +28,13 @@ def focus_rule(focus: str) -> str:
 
 
 def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
+    logger.info(
+        "Summarize request received ✅ "
+        f"(length={request.length}, "
+        f"focus={request.focus}, "
+        f"text_length={len(request.text)})"
+    )
+
     user_prompt = f"""
     Return ONLY a JSON object with the following format:
     {{
@@ -41,6 +51,7 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
     """
 
     try:
+        logger.debug("Sending prompt to Gemini model...")
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=user_prompt,
@@ -51,12 +62,15 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
                 response_mime_type="application/json",
             ),
         )
+        logger.debug("Response received from Gemini model")
 
         text = getattr(response, "text", None)
         if not text:
+            logger.error("Empty response from Gemini model ❌")
             raise errors.EMPTY_RESPONSE_ERROR
 
         response_text = text.strip()
+        logger.debug(f"Raw response text (truncated): {response_text[:100]}...")
 
         # Clean extra formatting (e.g., ```json ... ```)
         if not response_text.startswith("{"):
@@ -66,15 +80,19 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
         parsed_data = json.loads(response_text)
 
         if "summary" not in parsed_data or "topic" not in parsed_data:
+            logger.error("Missing keys in response JSON ❌")
             raise errors.MISSING_KEYS_ERROR
 
+        logger.info("Summarization completed successfully ✅")
         return SummarizeResponse(
             summary=parsed_data["summary"], topic=parsed_data["topic"]
         )
 
     except json.JSONDecodeError:
+        logger.exception("Failed to decode JSON from model response ❌")
         raise errors.INVALID_JSON_ERROR
     except HTTPException:
         raise
     except Exception:
+        logger.exception("Unexpected error during summarization ❌")
         raise errors.UNEXPECTED_ERROR
