@@ -20,4 +20,5 @@ def ask(question: Question, _: bool = Depends(verify_api_key)):
     answer = ask_gemini(question.text)
 
     logger.info("POST /ask completed ✅ (answer_length=%d)", len(answer))
+
     return {"answer": answer}
