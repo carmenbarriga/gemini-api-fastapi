@@ -3,6 +3,7 @@ import re
 
 from fastapi import HTTPException
 
+from core import errors
 from core.gemini import client, gemini_types
 from models.summarize import SummarizeRequest, SummarizeResponse
 
@@ -51,12 +52,11 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
             ),
         )
 
-        if not response or not getattr(response, "text", None):
-            raise HTTPException(
-                status_code=502, detail="Empty response from Gemini model"
-            )
+        text = getattr(response, "text", None)
+        if not text:
+            raise errors.EMPTY_RESPONSE_ERROR
 
-        response_text = response.text.strip()
+        response_text = text.strip()
 
         # Clean extra formatting (e.g., ```json ... ```)
         if not response_text.startswith("{"):
@@ -66,20 +66,15 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
         parsed_data = json.loads(response_text)
 
         if "summary" not in parsed_data or "topic" not in parsed_data:
-            raise HTTPException(
-                status_code=502,
-                detail="Missing keys in Gemini JSON response ('summary' or 'topic')",
-            )
+            raise errors.MISSING_KEYS_ERROR
 
         return SummarizeResponse(
             summary=parsed_data["summary"], topic=parsed_data["topic"]
         )
 
     except json.JSONDecodeError:
-        raise HTTPException(status_code=502, detail="Invalid JSON from Gemini model")
+        raise errors.INVALID_JSON_ERROR
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(
-            status_code=502, detail="Unexpected error from Gemini model"
-        )
+        raise errors.UNEXPECTED_ERROR

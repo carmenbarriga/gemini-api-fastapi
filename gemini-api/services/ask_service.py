@@ -1,17 +1,23 @@
-from typing import cast
-
 from fastapi import HTTPException
 
+from core import errors
 from core.gemini import client
 
 
 def ask_gemini(question: str) -> str:
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=question,
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=question,
+        )
 
-    if not response or not getattr(response, "text", None):
-        raise HTTPException(status_code=502, detail="Empty response from Gemini model")
+        text = getattr(response, "text", None)
 
-    return cast(str, response.text)
+        if not text:
+            raise errors.EMPTY_RESPONSE_ERROR
+
+        return text
+    except HTTPException:
+        raise
+    except Exception:
+        raise errors.UNEXPECTED_ERROR
