@@ -1,13 +1,10 @@
 import logging
-import os
 
-from dotenv import load_dotenv
+from core.config import settings
 
 
 def setup_logging() -> None:
-    load_dotenv()
-
-    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level = settings.log_level
 
     logging.basicConfig(
         level=getattr(logging, log_level, logging.INFO),

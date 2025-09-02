@@ -1,12 +1,7 @@
-import os
-
-from dotenv import load_dotenv
 from google.genai import Client, types
 
-load_dotenv()
+from core.config import settings
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-client = Client(api_key=GEMINI_API_KEY)
+client = Client(api_key=settings.gemini_api_key)
 
 gemini_types = types

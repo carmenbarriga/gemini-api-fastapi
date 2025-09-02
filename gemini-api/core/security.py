@@ -1,12 +1,9 @@
-import os
-
-from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-load_dotenv()
+from core.config import settings
 
-APP_API_KEY = os.getenv("APP_API_KEY")
+APP_API_KEY = settings.app_api_key
 
 security = HTTPBearer()
 
