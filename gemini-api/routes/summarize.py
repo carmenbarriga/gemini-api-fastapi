@@ -10,7 +10,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/summarize", response_model=SummarizeResponse)
+@router.post("/summarize", response_model=SummarizeResponse, tags=["Summarize"])
 def summarize(request: SummarizeRequest, _: bool = Depends(verify_api_key)):
     """
     Summarizes the input text according to the chosen 'length' and 'focus',
