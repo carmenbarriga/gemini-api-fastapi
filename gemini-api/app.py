@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -10,6 +11,17 @@ from routes import ask, health, summarize
 setup_logging()
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Startup ---
+    logger.info("🚀 Gemini API is starting up...")
+
+    yield
+    # --- Shutdown ---
+    logger.info("🛑 Gemini API is shutting down...")
+
+
 app = FastAPI(
     title="Gemini API",
     description=(
@@ -20,6 +32,7 @@ app = FastAPI(
         "All responses are structured and validated to ensure consistency."
     ),
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.include_router(ask.router)
