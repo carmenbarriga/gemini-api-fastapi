@@ -10,7 +10,17 @@ from routes import ask, health, summarize
 setup_logging()
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+app = FastAPI(
+    title="Gemini API",
+    description=(
+        "An API powered by the Gemini model that provides two main features:\n\n"
+        "- **Ask**: Send a question and get a direct response.\n"
+        "- **Summarize**: Generate a summary and main topic from a given text. "
+        "Supports different summary lengths and focus levels.\n\n"
+        "All responses are structured and validated to ensure consistency."
+    ),
+    version="1.0.0",
+)
 
 app.include_router(ask.router)
 app.include_router(summarize.router)
