@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 def ask_gemini(question: str) -> str:
     try:
         logger.info("Sending request to Gemini ✅ (question_length=%d)", len(question))
+
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=question,
@@ -20,7 +21,6 @@ def ask_gemini(question: str) -> str:
         text = None
 
         if not text:
-            logger.error("Empty response from Gemini model ❌")
             raise errors.EMPTY_RESPONSE_ERROR
 
         logger.info("Received response from Gemini ✅ (text_length=%d)", len(text))
@@ -28,5 +28,5 @@ def ask_gemini(question: str) -> str:
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Unexpected error while calling Gemini ❌")
+        logger.exception("ask_gemini: Unexpected error while calling Gemini ❌")
         raise errors.UNEXPECTED_ERROR
