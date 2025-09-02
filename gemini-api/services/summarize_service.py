@@ -66,7 +66,6 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
 
         text = getattr(response, "text", None)
         if not text:
-            logger.error("Empty response from Gemini model ❌")
             raise errors.EMPTY_RESPONSE_ERROR
 
         response_text = text.strip()
@@ -80,7 +79,6 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
         parsed_data = json.loads(response_text)
 
         if "summary" not in parsed_data or "topic" not in parsed_data:
-            logger.error("Missing keys in response JSON ❌")
             raise errors.MISSING_KEYS_ERROR
 
         logger.info("Summarization completed successfully ✅")
@@ -89,10 +87,10 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
         )
 
     except json.JSONDecodeError:
-        logger.exception("Failed to decode JSON from model response ❌")
+        logger.exception("summarize_text: Failed to decode JSON from model response ❌")
         raise errors.INVALID_JSON_ERROR
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Unexpected error during summarization ❌")
+        logger.exception("summarize_text: Unexpected error ❌")
         raise errors.UNEXPECTED_ERROR

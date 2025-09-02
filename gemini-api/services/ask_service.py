@@ -18,8 +18,6 @@ def ask_gemini(question: str) -> str:
         )
 
         text = getattr(response, "text", None)
-        text = None
-
         if not text:
             raise errors.EMPTY_RESPONSE_ERROR
 
