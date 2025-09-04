@@ -1,12 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from core.logging_config import setup_logging
+from middlewares.logging_middleware import LoggingMiddleware
 from routes import ask, health, summarize
 
 setup_logging()
@@ -40,33 +41,7 @@ app.include_router(ask.router)
 app.include_router(summarize.router)
 app.include_router(health.router)
 
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.exception(
-        "❌ Unhandled error (500) on %s %s",
-        request.method,
-        request.url.path,
-    )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"},
-    )
-
-
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    logger.error(
-        "❌ HTTPException (%d) on %s %s - %s",
-        exc.status_code,
-        request.method,
-        request.url.path,
-        exc.detail,
-    )
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
-    )
+app.add_middleware(LoggingMiddleware)
 
 
 @app.exception_handler(RequestValidationError)
@@ -74,21 +49,21 @@ async def request_validation_handler(request: Request, exc: RequestValidationErr
     error_list = exc.errors()
     details = []
 
-    for err in error_list:
-        loc = ".".join(str(x) for x in err.get("loc", []))
-        msg = err.get("msg", "Request validation error")
+    for error in error_list:
+        loc = ".".join(str(x) for x in error.get("loc", []))
+        msg = error.get("msg", "Request validation error")
         details.append(f"{loc}: {msg}")
 
-    logger.error(
-        "❌ Request validation failed (422) on %s %s - %s",
+    logger.warning(
+        "⚠️ Request validation failed on %s %s - %s",
         request.method,
         request.url.path,
         "; ".join(details),
     )
 
     return JSONResponse(
-        status_code=422,
-        content={"detail": "Request validation failed (invalid input)"},
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": "Request validation failed"},
     )
 
 
@@ -97,19 +72,53 @@ async def response_validation_handler(request: Request, exc: ResponseValidationE
     error_list = exc.errors()
     details = []
 
-    for err in error_list:
-        loc = ".".join(str(x) for x in err.get("loc", []))
-        msg = err.get("msg", "Response Validation Error")
+    for error in error_list:
+        loc = ".".join(str(x) for x in error.get("loc", []))
+        msg = error.get("msg", "Response validation error")
         details.append(f"{loc}: {msg}")
 
     logger.error(
-        "❌ Response validation failed (422) on %s %s - %s",
+        "❌ Response validation failed on %s %s - %s",
         request.method,
         request.url.path,
         "; ".join(details),
     )
 
     return JSONResponse(
-        status_code=422,
-        content={"detail": "Response validation failed (invalid response)"},
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal Server Error"},
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    log_level = logging.ERROR if exc.status_code >= 500 else logging.WARNING
+
+    logger.log(
+        log_level,
+        "HTTPException (%d) on %s %s - %s",
+        exc.status_code,
+        request.method,
+        request.url.path,
+        exc.detail,
+    )
+
+    detail = exc.detail if exc.status_code < 500 else "Internal Server Error"
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": detail},
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception(
+        "❌ Unhandled exception on %s %s",
+        request.method,
+        request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal Server Error"},
     )
