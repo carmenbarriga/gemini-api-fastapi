@@ -6,16 +6,15 @@ from fastapi import HTTPException
 
 from core import errors
 from core.gemini import client, gemini_types
-from models.summarize import SummarizeRequest, SummarizeResponse
 
 logger = logging.getLogger(__name__)
 
 
 def length_rule(length: str) -> str:
     return {
-        "short": "1–2 sentences, max ~50 words.",
-        "medium": "One cohesive paragraph (~80–120 words).",
-        "detailed": "5–7 bullet points with key information.",
+        "short": "Write exactly 1 paragraph between 80 and 120 words.",
+        "medium": "Write 2 paragraphs totaling between 160 and 240 words.",
+        "detailed": "Write 3 paragraphs totaling between 240 and 360 words.",
     }[length]
 
 
@@ -27,12 +26,12 @@ def focus_rule(focus: str) -> str:
     }[focus]
 
 
-def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
+def summarize_text(text: str, length: str, focus: str) -> dict:
     logger.info(
         "Summarize request received ✅ "
-        f"(length={request.length}, "
-        f"focus={request.focus}, "
-        f"text_length={len(request.text)})"
+        f"(length={length}, "
+        f"focus={focus}, "
+        f"text_length={len(text)})"
     )
 
     user_prompt = f"""
@@ -43,15 +42,17 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
     }}
     Rules:
     - 'summary' must follow:
-        - {length_rule(request.length)}
-        - {focus_rule(request.focus)}
+        - {length_rule(length)}
+        - {focus_rule(focus)}
     - 'topic' must be a single clear sentence describing the main theme.
     Text to summarize:
-    \"\"\"{request.text}\"\"\"
+    \"\"\"{text}\"\"\"
     """
 
     try:
         logger.debug("Sending prompt to Gemini model...")
+        logger.debug(f"❌❌❌❌USER PROMPT: {user_prompt} ❌❌❌❌❌❌❌❌")
+
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=user_prompt,
@@ -64,11 +65,11 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
         )
         logger.debug("Response received from Gemini model")
 
-        text = getattr(response, "text", None)
-        if not text:
+        response_text = getattr(response, "text", None)
+        if not response_text:
             raise errors.EMPTY_RESPONSE_ERROR
 
-        response_text = text.strip()
+        response_text = response_text.strip()
         logger.debug(f"Raw response text (truncated): {response_text[:100]}...")
 
         # Clean extra formatting (e.g., ```json ... ```)
@@ -82,9 +83,11 @@ def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
             raise errors.MISSING_KEYS_ERROR
 
         logger.info("Summarization completed successfully ✅")
-        return SummarizeResponse(
-            summary=parsed_data["summary"], topic=parsed_data["topic"]
-        )
+        return {
+            "summary": parsed_data["summary"],
+            "topic": parsed_data["topic"],
+            "length": length,
+        }
 
     except json.JSONDecodeError:
         logger.exception("summarize_text: Failed to decode JSON from model response ❌")

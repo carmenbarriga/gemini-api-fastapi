@@ -14,7 +14,10 @@ def ask_gemini(question: str) -> str:
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=question,
+            contents=(
+                "Answer the following question in at most 4000 characters:\n"
+                f"{question}"
+            ),
         )
 
         text = getattr(response, "text", None)

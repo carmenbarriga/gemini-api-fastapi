@@ -23,12 +23,12 @@ def summarize(request: SummarizeRequest, _: bool = Depends(verify_api_key)):
         request.focus,
     )
 
-    response = summarize_text(request)
+    response = summarize_text(request.text, request.length, request.focus)
 
     logger.info(
         "POST /summarize completed ✅ (summary_length=%d, topic=%s)",
-        len(response.summary),
-        response.topic,
+        len(response["summary"]),
+        response["topic"],
     )
 
     return response
