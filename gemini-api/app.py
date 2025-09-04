@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.exceptions import ResponseValidationError
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -66,6 +66,29 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_handler(request: Request, exc: RequestValidationError):
+    error_list = exc.errors()
+    details = []
+
+    for err in error_list:
+        loc = ".".join(str(x) for x in err.get("loc", []))
+        msg = err.get("msg", "Request validation error")
+        details.append(f"{loc}: {msg}")
+
+    logger.error(
+        "❌ Request validation failed (422) on %s %s - %s",
+        request.method,
+        request.url.path,
+        "; ".join(details),
+    )
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Request validation failed (invalid input)"},
     )
 
 
