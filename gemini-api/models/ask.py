@@ -1,7 +1,9 @@
 from pydantic import BaseModel, Field
 
+from .base import StrictBaseModel
 
-class AskRequest(BaseModel):
+
+class AskRequest(StrictBaseModel):
     question: str = Field(
         min_length=3,
         max_length=300,

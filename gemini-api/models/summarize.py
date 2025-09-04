@@ -2,8 +2,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .base import StrictBaseModel
 
-class SummarizeRequest(BaseModel):
+
+class SummarizeRequest(StrictBaseModel):
     text: str = Field(
         min_length=20,
         max_length=2000,
