@@ -20,6 +20,8 @@ def ask_gemini(question: str) -> str:
             ),
         )
 
+        raise Exception
+
         text = getattr(response, "text", None)
         if not text:
             raise errors.EMPTY_RESPONSE_ERROR
